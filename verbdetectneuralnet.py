@@ -1,21 +1,21 @@
-from neuralnet import NeuralNetwork
+from neuron import NeuralNetwork
 from numpy import exp, array, random, dot
 import numpy as np
 import json
 from random import shuffle
 words_from_every_lang = {}
 
-with open('./words.json', 'r+') as words:
-    json_words = json.load(words)
-    verbs = json_words['verb']
-    nouns = json_words['noun']
-# Format of word description lists
-# [vowel percent, consonant percent]
-
 class VerbNeuralNet(NeuralNetwork):
-    def __init__(self, synapse_count):
-        random.seed(0)
-        self.synaptic_weights = 2 * random.random((synapse_count,1)) - 1
+    def __init__(self, synapse_count, type):
+        if type == 1:
+            self.synaptic_weights = np.ones((synapse_count,1))
+        elif type == 0:
+            self.synaptic_weights = np.zeros((synapse_count,1))
+        elif type == -1:
+            self.synaptic_weights = -1 * np.ones((synapse_count,1))
+        elif type == "rand":
+            np.random.seed(1)
+            self.synaptic_weights = 2 * np.random.random((synapse_count,1)) - 1
     def __sigmoid_derivative(self, x):
         # back propogation = propogating error back into neuron to adjust weights
         return exp(-x)/((1+exp(-x))**2)
@@ -37,58 +37,7 @@ class VerbNeuralNet(NeuralNetwork):
             self.synaptic_weights += adjustment
             if iteration % iterations/10 == 0:
                 print("Generation " + str(iteration))
-        print(self.synaptic_weights)
-class LanguageBrain():
-    def __init__(self, synapse_count, names=False, neuron_count=0):
-        self.synapse_count = synapse_count
-        self.names = []
-        if names == False:
-            self.neurons = []
-            self.grow(neuron_count)
-        else:
-            self.neurons = {}
-            self.grow(names=names)
-    def __str__(self):
-        string = ""
-        for neuron_num, neuron in self.neurons:
-            string += "#########\n"
-            string += "Neuron " + str(neuron_num) + " synapse weights \n"
-            string += str(neuron.synaptic_weights) + "\n"
-        return string
-    def grow(self, names=False, neuron_count=0):
-        if names == False:
-            for x in range(neuron_count):
-                self.neurons.append(VerbNeuralNet(self.synapse_count))
-        else:
-            self.names.extend(names)
-            for neuron_name in names:
-                print(neuron_name)
-                self.neurons[neuron_name] = VerbNeuralNet(self.synapse_count)
-    def learn(self, inputs, outputs, iterations):
-        # things should be a list of lists hopefully
-        # thing = [[inputs, outputs],[inputs, outputs], . . .]
-        if len(outputs) < len(self.neurons):
-            print("WARNING! Some neurons will not learn anything!")
-        elif len(outputs) > len(self.neurons):
-            raise ValueError("Amount of outputs to learn against greater than amount of neurons, must grow brain first")
-
-        if self.names == False:
-            for num, thing in things:
-                self.neurons[num].train(iterations, things[0], thing[1])
-        else:
-            for name in self.names:
-                print(name)
-                self.neurons[name].train(iterations, inputs, outputs[name])
-    def predict(self, inputs):
-        results = {}
-        if self.names == False:
-            for neuron_num, neuron in enumerate(self.neurons):
-                results[neuron_num] = neuron.predict(inputs)
-        else:
-            for key, neuron in self.neurons.items():
-                results[key] = neuron.predict(inputs)
-        return results
-
+        
 
 def genVerbDescriptor(word):
 
@@ -119,13 +68,10 @@ def genVerbDescriptor(word):
         descriptor.append(0)
     return descriptor
 def grabWords(filename):
-    minLength = 5
-    filename = "data/" + filename
     filecontents = []
     with open(filename) as words:
         for line in words:
-            if len(line.split(",")[0]) >= 5:
-                filecontents.append(line.split(",")[0].lower())
+            filecontents.append(line.split(",")[0].lower())
     return filecontents
 def genDescriptor(word):
     word = word[0:15]
@@ -144,58 +90,69 @@ def genDescriptor(word):
         descriptor.extend(letter_descriptor)
     return descriptor
 
+
 if __name__ == "__main__":
-    words_from_every_lang["random"] = grabWords("output0.txt")
-    words_from_every_lang["key mash"] = grabWords("output1.txt")
-    words_from_every_lang["english"] = grabWords("output2.txt")
-    words_from_every_lang["spanish"] = grabWords("output3.txt")
-    words_from_every_lang["french"] = grabWords("output4.txt")
-    words_from_every_lang["german"] = grabWords("output5.txt")
-    words_from_every_lang["japanese"] = grabWords("output6.txt")
-    words_from_every_lang["swahili"] = grabWords("output7.txt")
-    words_from_every_lang["mandarin"] = grabWords("output8.txt")
-    words_from_every_lang["esperanto"] = grabWords("output9.txt")
-    words_from_every_lang["dutch"] = grabWords("output10.txt")
-    words_from_every_lang["polish"] = grabWords("output11.txt")
-    words_from_every_lang["lojban"] = grabWords("output12.txt")
+    
+    english = grabWords("data/output2.txt")
+    random = grabWords("data/output0.txt")
 
+
+    inputs = grabWords("inputs.txt")
+    outputs = grabWords("outputs.txt")
+    
+    test_inputs = []
+    test_outputs = outputs
+
+    for word in inputs:
+        test_inputs.append(genDescriptor(word))
+    
+    
     word_descriptors = []
-    words_to_train_on = []
+    words_to_train_on = english + random
     training_set_outputs = {}
-    languages_to_train = ["english","mandarin"]
     training_input = []
-    training_outputs = {}
-    # initialize training_outputs
-    for lang in languages_to_train:
-        training_outputs[lang] = []
-        for word in words_from_every_lang[lang]:
-            words_to_train_on.append(word)
-
+    training_outputs = []
+    
     shuffle(words_to_train_on)
-    # define training inputs and outputs more thoroughly
-
+    
     for word in words_to_train_on:
         descriptor = genDescriptor(word)
         training_input.append(descriptor)
-        for lang in languages_to_train:
-            if word in words_from_every_lang[lang]:
-                training_outputs[lang].append([1])
-            else:
-                training_outputs[lang].append([0])
-
-
-    # grow a brain with 13 neurons and 390 synapses for every neuron
-    brain = LanguageBrain(26*15, names=languages_to_train)
-
-
-    for key, value in training_outputs.items():
-        training_set_outputs[key] = array(value)
+        if word in english:
+            training_outputs.append([1])
+        else:
+            training_outputs.append([0])
+    
+    
+    training_outputs = array(training_outputs)
     training_input = array(training_input)
+    
+    print(training_outputs.shape)
+    print(training_input.shape)
+    
+    all_one = VerbNeuralNet(390, 1)
+    all_zero = VerbNeuralNet(390, 0)
+    all_negone = VerbNeuralNet(390, -1)
+    all_rand = VerbNeuralNet(390, "rand")
 
-    brain.learn(training_input, training_set_outputs, 10000)
+    trainings = 10000
 
-    while True:
-        word = str(input("Enter a word: "))
-        results = brain.predict(genDescriptor(word))
-        for lang in languages_to_train:
-            print(str(results[lang]) + " probability of being " + str(lang))
+    all_one.train(trainings, training_input, training_outputs)
+    all_zero.train(trainings, training_input, training_outputs)
+    all_negone.train(trainings, training_input, training_outputs)
+    all_rand.train(trainings, training_input, training_outputs)
+    
+    all_one_err = 0.0
+    all_zero_err = 0.0
+    all_negone_err = 0.0
+    all_rand_err = 0.0
+    print(test_inputs)
+    for x, word in enumerate(test_inputs):
+        all_one_err += abs(float(all_one.predict(array(word))[0]) - float(test_outputs[x]))
+        all_zero_err += abs(float(all_zero.predict(array(word))[0]) - float(test_outputs[x])) 
+        all_negone_err += abs(float(all_negone.predict(array(word))[0]) - float(test_outputs[x]))
+        all_rand_err += abs(float(all_rand.predict(array(word))[0]) - float(test_outputs[x]))
+    print("one: " + str((100-all_one_err)/100))
+    print("0: " + str((100-all_zero_err)/100))
+    print("-1: " + str((100-all_negone_err)/100))
+    print("rand: " + str((100-all_rand_err)/100))

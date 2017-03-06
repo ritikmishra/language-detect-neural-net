@@ -12,7 +12,7 @@ class NeuralNetwork():
     def __sigmoid(self, x):
         """describes s shaped curve. we pass the weighted sum of the inputs in to normmalize them between 0 and 1"""
         e = 2.71828
-        return 1/(1+exp(-x))
+        return 1/(1+(exp(-1*x)))
     def __sigmoid_derivative(self, x):
         # back propogation = propogating error back into neuron to adjust weights
         return exp(-x)/((1+exp(-x))**2)
